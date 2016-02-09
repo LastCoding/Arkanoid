@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html>
+<meta charset="UTF-8">
+<head>
+
+<style>
+
+body {
+
+	background-color: black;
+
+}
+
+* {
+
+	margin: 0;
+	padding: 0;
+
+}
+
+html, body {
+
+	width: 100%;
+	height: 100%;
+	overflow: hidden;
+
+}
+
+canvas {
+
+	background-image: url("images/fondo_espacial.jpg");
+	padding: 0;
+    margin: auto;
+    height: 100%; 
+  	width: 100%;
+
+}
+
+</style>
+
+ <script language="JavaScript">
+
+var snd = new Audio("audios/fondo.mp3"); // buffers automatically when created
+var hitMusic = new Audio("audios/hit.mp3");
+snd.play();
+
+if (snd.currentTime==328.96) {
+	snd.currentTime=0;
+	snd.play();
+}
+
+
+var w,h,ctx,canvas;
+var x,y,xp,yp;
+var id;
+var dx,dy;
+var bricks = [];
+var pilotaOff = false;
+var vidas = 3;
+var start = false;
+var start2 = false;
+var gameOver = false;
+var gameWin = false;
+var randomNumb = 2;
+var effect = false;
+var oofLimits = false;
+var sizeGiven = false;
+
+var effectDownY = 0;
+var effectDownX = 0;
+
+// Pilota:
+function pilota(damage,size){
+	this.dmg = damage;
+	this.size = size;
+}
+
+pilota.prototype.pintada = function(x,y,size){
+	ctx.save();
+	ctx.beginPath();
+	ctx.fillStyle="red";
+    ctx.arc(x,y,this.size,0,2*Math.PI);
+    ctx.fill();
+	ctx.restore();
+}
+
+pelota1 = new pilota(100,20);
+
+// Objectes animats:
+
+function reSizeBall() {
+	
+}
+
+reSizeBall.prototype.pintada = function(x,y,width,height) {
+	imagen= new Image();
+	imagen.src="images/resize.png";
+	ctx.beginPath();
+	ctx.drawImage(imagen,x,y,width,height);
+}
+
+ballResize = new reSizeBall();
+
+var palaHit = pelota1.size;
+var val1 = -10+(palaHit-20);
+var val2 = 1190-(palaHit-20);
+
+// Pala:
+
+var pala = {};
+pala.pintada = function(x,y) {
+	ctx.fillStyle="teal";
+    ctx.fillRect(x,y, 80, 15);
+};
+
+
+ function init() {
+ // 1 – Obtenim el canvas
+ canvas = document.getElementById('myCanvas');
+ // 2 – Associem el context
+ ctx=canvas.getContext('2d');
+ gameStart();
+
+ }
+
+ function gameStart() {
+
+    w = canvas.width;
+    h = canvas.height;
+
+    x=(w/2)-40; // posicion de la pala horizontal
+    y=850; // posicion de la pala vertical
+    xp=x+40; //posicion de la horizontal
+    yp=y-palaHit; //posicion de la vertical
+    dx=0; // dirección de movimiento de la pelota
+    dy=5; // velocidad de la pelota
+    score1=0;
+    x2=0;
+    y2=0;
+    
+    ctx = canvas.getContext("2d");
+    ctx.font = '15pt Calibri';
+    ctx.fillStyle = "white";
+    makeBrick(); 
+    actualitza();
+    document.addEventListener("keydown",escoltar,false);
+    id = requestAnimationFrame(actualitza);
+    
+}
+
+function pintarPista(){
+    ctx.clearRect(0, 0, w, h);
+}
+
+// Objecte de Bricks:
+
+function Bricks(x,y,width,shield) {
+	this.x = x;
+	this.y = y;
+	this.w = width;
+	this.s = shield;
+}
+
+// Fer la pilota més gran:
+
+function makeBrick() {
+	
+
+	for(var i = 0; i < 10; i++) {
+		var x = (i*30)+(i*100);
+		
+		if (i==0) x += 10;
+		brick = new Bricks(x,15,75,50);
+		bricks.push(brick);
+	}
+
+	for(var i = 0; i < 10; i++) {
+		var x = (i*30)+(i*100);
+		
+		if (i==0) x += 10;
+		brick = new Bricks(x,50,75,150);
+		bricks.push(brick);
+	}
+
+	for(var i = 0; i < 10; i++) {
+		var x = (i*30)+(i*100);
+		
+		if (i==0) x += 10;
+		brick = new Bricks(x,85,75,50);
+		bricks.push(brick);
+	}
+
+	for(var i = 0; i < 10; i++) {
+		var x = (i*30)+(i*100);
+		
+		if (i==0) x += 10;
+		brick = new Bricks(x,125,75,150);
+		bricks.push(brick);
+	}
+
+}
+
+function checkEffectCol(xImagen,yImagen,width,height) {
+	if (yImagen>=y && ( xImagen>(x-width) && xImagen<=(x+80) ) )  {
+		oofLimits = false;
+		//console.log("toca toca");
+		var randNumbFunct2 = Math.floor(Math.random() * 30 + 5);
+		pelota1.size = randNumbFunct2;
+		palaHit = pelota1.size;
+		effect = true;
+		sizeGiven = true;
+	}
+	if (yImagen >=y && !sizeGiven) {
+		console.log("Out of limits.");
+		effectDownX = 0;
+		effectDownY = 0;
+		effect = false;
+		sizeGiven = false;
+	} 
+
+	if (sizeGiven) {
+		effectDownX = 0;
+		effectDownY = 0;
+		effect = false;
+		sizeGiven = false;
+		//console.log("toca.");
+	} 
+}
+
+function checkBrickCol() {
+	if (bricks.length == 0) {
+		gameWin = true;
+	}
+	for(var i = 0; i < bricks.length; i++) {
+		b = bricks[i];
+		if ( ((yp-pelota1.size) >=b.y && (yp-pelota1.size)<=(b.y+25) ) && (xp >= (b.x-pelota1.size) && xp <= ((b.x+75+pelota1.size))) ) {
+			hitMusic.play();
+			hitMusic.currentTime=0;
+			var randNumbFunct = Math.floor(Math.random() * 3 + 1);
+			console.log(randNumbFunct);
+			b.s = b.s - pelota1.dmg;
+			if (b.s <= 0) {
+				bricks.splice(i,1);
+			}
+			dy=-dy;
+			if (randNumbFunct == randomNumb && b.s <=0) {
+				console.log(b.y);
+				if (!effect) {
+					effectDownX = b.x;
+				}
+				effect = true;
+			}
+
+		}
+	}
+}
+
+function paintBrick() {
+	
+	for(var i = 0; i < bricks.length; i++) {
+		b = bricks[i];
+		if (b.s <= 100) {
+		ctx.save();
+		ctx.fillStyle="yellow";
+		ctx.fillRect(b.x,b.y, b.w, 25);
+		ctx.restore();
+		} else {
+		ctx.save();
+		ctx.fillStyle="blue";
+		ctx.fillRect(b.x,b.y, b.w, 25);
+		ctx.restore();
+		}
+
+	}
+	}
+
+function actualitzaPilota(){
+    
+    if (pilotaOff) {
+
+	xp += dx;
+    yp += dy;
+
+    if (yp>=(y-palaHit+1) && xp>(x-palaHit) && ( xp>=(x-palaHit) && xp<=(x+15) )){ // si toca amb la pala de la part de la esquerra (l'extrem de la punta)
+	     dy=-dy;
+	     dx += -0.3;
+    }
+
+    if (yp>=(y-palaHit+1) && xp>(x-palaHit) && ( xp>(x+15) && xp<=(x+25) )){ // si toca amb la pala de la part de la esquerra (la punta)
+	     dy=-dy;
+	     dx += -0.2;
+    }
+
+    if (yp>=(y-palaHit+1) && xp>(x-palaHit) && ( xp>(x+25) && xp<=(x+35) )){ // si toca amb la pala de la part de la esquerra
+	     dy=-dy;
+	     dx += -0.1;
+    }	
+
+    if (yp>=(y-palaHit+1) && xp>(x-palaHit) && (xp>(x+35) && xp<(x+45))){ // si toca amb la pala de la part d'enmig
+	     dy=-dy;
+	     dx += 0;
+    }
+    
+
+    if (yp>=(y-palaHit+1) && xp>(x-palaHit) && ( xp>=(x+45) && xp<(x+55))){ // si toca amb la pala de la dreta
+	     dy=-dy;
+	     dx += 0.1;
+    }
+
+    if (yp>=(y-palaHit+1) && xp>(x-palaHit) && ( xp>=(x+55) && xp<=(x+65))){ // si toca amb la pala de la dreta (la punta)
+	     dy=-dy;
+	     dx += 0.2;
+    }
+
+    if (yp>=(y-palaHit+1) && xp>(x-palaHit) && ( xp>(x+65) && xp<=(x+80+palaHit))){ // si toca amb la pala de la dreta (l'extrem de la punta)
+	     dy=-dy;
+	     dx += 0.3;
+    }
+
+	else if ((xp+palaHit) >= w) {
+        dx=-dx;
+    }
+    else if (xp <= (0+palaHit)){
+	    dx=-dx;
+    }
+    if (yp <= (0+palaHit)) {
+	    dy=-dy;
+	   
+    }
+
+    if (yp >= h) {
+    	vidas--;
+    }
+    if (vidas==3) {
+    	pelota1.pintada(xp,yp);
+    }
+
+    if (vidas == 2 && start===false) {
+    	pilotaOff = false;
+    	val1 = -10+(palaHit-20);
+		val2 = 1190-(palaHit-20);
+    	xp=x+40;
+    	yp=y-palaHit;
+    	dx=0;
+    	dy=5;
+    	pelota1.pintada(xp,yp);
+    } else if (vidas == 2 && start) {
+    	pelota1.pintada(xp,yp);
+    }
+
+    if (vidas == 1 && start2===false) {
+    	pilotaOff = false;
+    	xp=x+40;
+    	yp=y-palaHit;
+    	dx=0;
+    	dy=5;
+    	pelota1.pintada(xp,yp);
+    } else if (vidas == 1 && start2) {
+    	pelota1.pintada(xp,yp);
+    }    
+
+    if (vidas == 0) {
+    	pilotaOff = false;
+    	gameOver = true;
+    }
+
+    }
+    
+	
+}
+
+function actualitzaMarcador(){
+	ctx.fillText("Vidas: " + vidas, (w/2)-600, 800);
+
+	if (gameOver && gameWin == false) {
+		ctx.clearRect(0, 0, w, h);
+		ctx.fillText("GAME OVER" , (w/2)-65, 350);
+	} else if (gameWin) {
+		ctx.clearRect(0, 0, w, h);
+		ctx.fillText("YOU WIN" , (w/2)-65, 350);
+	}
+}
+
+function actualitza(timeStamp){
+	if (gameOver == false || gameWin == false) {
+	ctx.clearRect(0, 0, w, h);
+	pintarPista();
+	pala.pintada(x,y);
+	if (!pilotaOff) {
+		pelota1.pintada(xp,yp);
+	}
+	paintBrick();
+	checkBrickCol();
+	actualitzaPilota();
+	actualitzaMarcador();
+	id = requestAnimationFrame(actualitza);
+	if (effect) {
+		ballResize.pintada(effectDownX,effectDownY,40,30);
+		checkEffectCol(effectDownX,effectDownY,40,30);
+		effectDownY += 1;
+	}
+	
+} else actualitzaMarcador();
+}
+
+function escoltar(e){
+
+	if(e.keyCode==37 && x != (val1) ){
+		x+=-20;
+		
+		if(!pilotaOff) {
+			xp+=-20;
+		} else val1 = -10;
+		}
+		
+	
+	else if(e.keyCode==39 && x != (val2) ){
+		x+=+20;
+
+		if(!pilotaOff) {
+			xp+=+20;
+		} else val2 = 1190;;
+
+	}
+	if(e.keyCode==13) {
+		pilotaOff = true;
+		change = true;
+		if (vidas==2) {
+			pilotaOff = true;
+			start = true;
+		} else if (vidas==1) {
+			pilotaOff = true;
+			start2 = true;
+		}
+	}
+	
+}
+
+</script>	
+
+</head>
+<body onload="init();">
+
+ <canvas id="myCanvas" width="1260" height="880" style="border:1px solid #000000;">
+ El navegador no suporta canvas.
+ </canvas>
+
+ </body>
+ </html>
+
